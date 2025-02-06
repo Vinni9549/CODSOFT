@@ -1,0 +1,99 @@
+HANDWRITTEN TEXT GENERATION
+import numpy as np
+from keras.models import Sequential
+from keras.layers import Dense, LSTM, Embedding
+
+# Sample dataset of handwritten text examples
+handwritten_texts = [
+    "hello everyone my name is spoorthi",
+    "i am from scope department this is a dataset",
+    "machine learning makes handwritten text generation possible",
+    "every challenge is an opportunity to learn",
+    "artificial intelligence is shaping the future",
+    "this dataset is created for training an AI model"
+]
+
+# Define the alphabet (characters the model will recognize)
+alphabet = "abcdefghijklmnopqrstuvwxyz "
+
+# Create mappings for character-to-index and index-to-character
+char_to_idx = {char: idx for idx, char in enumerate(alphabet)}
+idx_to_char = {idx: char for idx, char in enumerate(alphabet)}
+
+# Define the maximum sequence length
+max_seq_length = max(len(text) for text in handwritten_texts)
+
+# Convert text data into numerical sequences
+X_data = []
+y_data = []
+
+for text in handwritten_texts:
+    inputs = [char_to_idx[char] for char in text[:-1] if char in char_to_idx]  # Input sequence
+    outputs = [char_to_idx[char] for char in text[1:] if char in char_to_idx]  # Target sequence
+    X_data.append(inputs)
+    y_data.append(outputs)
+
+# Convert to numpy arrays and pad sequences
+X_data = np.array([np.pad(seq, (0, max_seq_length - len(seq)), 'constant') for seq in X_data])
+y_data = np.array([np.pad(seq, (0, max_seq_length - len(seq)), 'constant') for seq in y_data])
+
+# Build the RNN model
+model = Sequential([
+    Embedding(input_dim=len(alphabet), output_dim=64, input_length=max_seq_length),
+    LSTM(units=64, return_sequences=True),
+    LSTM(units=64, return_sequences=True),  # Keep return_sequences=True for consistent output shape
+    Dense(units=len(alphabet), activation='softmax')
+])
+
+# Compile the model
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam')
+
+# **Fixed Training Loop**
+epochs = 50  # Reduced for efficiency
+for epoch in range(epochs):
+    model.fit(X_data, y_data, epochs=1, batch_size=1, verbose=0)
+    print(f"Epoch {epoch+1}/{epochs} completed")
+
+# Function to generate new handwritten-like text
+def generate_text(model, start_sequence, max_length=50, temperature=1.0):
+    generated_text = start_sequence.lower()
+
+    for _ in range(max_length):
+        # Convert input to indices, handling unknown characters
+        input_seq = [char_to_idx[char] for char in generated_text if char in char_to_idx]
+        input_seq = np.pad(input_seq, (max_seq_length - len(input_seq), 0), 'constant')
+        input_seq = input_seq.reshape(1, max_seq_length)
+
+        # Predict the next character probabilities
+        probabilities = model.predict(input_seq, verbose=0)[0][-1]  # Get the last timestep output
+
+        # Apply temperature-based sampling
+        probabilities = np.asarray(probabilities).astype("float64")
+        probabilities = np.log(probabilities + 1e-10) / temperature  # Prevent log(0)
+        probabilities = np.exp(probabilities) / np.sum(np.exp(probabilities))  # Softmax
+
+        # Sample the next character
+        next_char_idx = np.random.choice(len(alphabet), p=probabilities)
+        next_char = idx_to_char[next_char_idx]
+
+        # Stop if the generated character is a space or invalid
+        if next_char == " ":
+            break
+
+        generated_text += next_char
+
+    return generated_text
+
+# Take input from the user for the starting sequence
+while True:
+    start_sequence = input("Enter a starting sequence: ").lower()
+    start_sequence = "".join([char for char in start_sequence if char in char_to_idx])  # Remove invalid chars
+    
+    if start_sequence:
+        break
+    else:
+        print("Please enter a valid starting sequence containing only letters and spaces.")
+
+# Generate new text based on the user-provided starting sequence
+generated_text = generate_text(model, start_sequence)
+print("\nGenerated Text:\n", generated_text)
