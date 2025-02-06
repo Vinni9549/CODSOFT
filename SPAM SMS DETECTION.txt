@@ -1,0 +1,40 @@
+                                                                                                          SPAM SMS DETECTION
+import re
+
+# Training data for spam and legitimate messages
+spam_messages = [
+    "Win a Lottery of 100 crores!",
+    "Your account has been selected for free 48 lakhs worth House.",
+    "Get 20% off your next purchase!",
+    "You have won a prize!"
+]
+
+legitimate_messages = [
+    "Hello, how are you?",
+    "Your package has been shipped.",
+    "Your amount has been debited from XXXXXXXX2354."
+]
+
+# Create a dictionary to store spam keywords and their frequency
+spam_keywords = {}
+
+# Populate the spam_keywords dictionary from spam messages
+for message in spam_messages:
+    words = re.findall(r'\b\w+\b', message.lower())  # Extract words using regex, convert to lowercase
+    for word in words:
+        spam_keywords[word] = spam_keywords.get(word, 0) + 1  # Increment keyword count
+
+# Function to classify a message as spam or legitimate based on spam keywords
+def classify_message(message):
+    words = re.findall(r'\b\w+\b', message.lower())  # Extract words from the input message
+    spam_score = sum(spam_keywords.get(word, 0) for word in words)  # Calculate spam score
+    return "Spam" if spam_score > 2 else "Legitimate"  # Classify based on score
+
+# Main loop to take user input and classify messages
+while True:
+    user_input = input("Enter an SMS message to classify (or type 'exit' to quit): ")
+    if user_input.lower() == 'exit':
+        print("Exiting the program.")
+        break
+    classification = classify_message(user_input)
+    print(f"Message: '{user_input}' - Classification: {classification}")
