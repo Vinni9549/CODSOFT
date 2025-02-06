@@ -1,4 +1,4 @@
-                                                                                                          SPAM SMS DETECTION
+
 import re
 
 # Training data for spam and legitimate messages
