@@ -1,0 +1,84 @@
+                                                                            MOVIE GENRE CLASSIFICATION
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, classification_report
+
+# Sample dataset with diverse movie plot summaries
+data = {
+    'plot_summary': [
+        "A detective must solve a murder mystery in a futuristic cyberpunk city.",
+        "A young wizard discovers his magical heritage and battles a dark sorcerer.",
+        "An astronaut is stranded on Mars and must find a way to survive alone.",
+        "A former soldier is recruited to join a secret spy organization to stop a global threat.",
+        "A young woman enters a mysterious mansion and uncovers its supernatural secrets.",
+        "A group of kids discover a hidden treasure map and embark on an adventurous journey.",
+        "A scientist accidentally creates a time machine and gets trapped in the past.",
+        "A superhero struggles to balance his personal life while fighting crime in the city.",
+        "A group of survivors must navigate a post-apocalyptic world overrun by mutants.",
+        "A journalist uncovers a conspiracy that threatens the entire nation."
+    ],
+    'genre': ['Mystery', 'Fantasy', 'Science Fiction', 'Action', 'Horror', 'Adventure', 'Science Fiction', 'Superhero', 'Post-Apocalyptic', 'Thriller']
+}
+
+# Convert data into a DataFrame
+df = pd.DataFrame(data)
+
+# Download necessary NLTK data
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('punkt_tab') # This line downloads the punkt_tab data to resolve the LookupError
+
+# Define stopwords
+stop_words = set(stopwords.words('english'))
+
+# Function to preprocess text data (tokenization, lowercasing, stopword removal)
+def preprocess_text(text):
+    tokens = word_tokenize(text.lower())  # Convert text to lowercase and tokenize
+    tokens = [word for word in tokens if word.isalpha() and word not in stop_words]  # Remove stopwords and non-alphabetic tokens
+    return ' '.join(tokens)  # Join the cleaned words back into a string
+
+# Apply preprocessing to the plot summaries
+df['plot_summary'] = df['plot_summary'].apply(preprocess_text)
+
+# Split dataset into training and testing sets (80% training, 20% testing)
+X_train, X_test, y_train, y_test = train_test_split(df['plot_summary'], df['genre'], test_size=0.2, random_state=42)
+
+# Initialize TF-IDF vectorizer (limit to top 5000 words)
+vectorizer = TfidfVectorizer(max_features=5000)
+
+# Fit and transform the training data, then transform the test data
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
+
+# Train a Naive Bayes classifier
+clf = MultinomialNB()
+clf.fit(X_train_tfidf, y_train)
+
+# Predict the genres of the test data
+y_pred = clf.predict(X_test_tfidf)
+
+# Evaluate the model's performance
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Function to predict genre based on user input
+def predict_genre(plot_summary):
+    # Preprocess the input plot summary
+    processed_summary = preprocess_text(plot_summary)
+    # Transform the input using the fitted vectorizer
+    summary_tfidf = vectorizer.transform([processed_summary])
+    # Predict the genre
+    predicted_genre = clf.predict(summary_tfidf)
+    return predicted_genre[0]
+
+# Example usage of the user input function
+user_input = input("Enter a movie plot summary to predict its genre: ")
+predicted_genre = predict_genre(user_input)
+print(f"The predicted genre is: {predicted_genre}")
